@@ -99,3 +99,28 @@ test("foreign holdings retain currency; future purchases are rejected", () => {
   assert.equal(F.portfolio([usd], [p], "2025-01-03")[0].currency, "USD");
   assert.throws(() => F.validatePurchase({ ...p, date: "2099-01-01" }, [usd]));
 });
+
+test("calendar-year periods use the previous closing price and stop at year end", () => {
+  const asset = {
+    ...a,
+    prices: [
+      { date: "2023-12-29", price: 80 },
+      { date: "2024-06-01", price: 90 },
+      { date: "2024-12-31", price: 100 },
+      { date: "2025-01-02", price: 110 },
+    ],
+  };
+  const result = F.compare([asset], "2024");
+  assert.equal(result.start, "2023-12-29");
+  assert.equal(result.end, "2024-12-31");
+  assert.ok(Math.abs(result.series[0].return - 25) < 1e-8);
+  const partial = F.years({
+    ...a,
+    prices: [
+      { date: "2024-03-01", price: 100 },
+      { date: "2024-12-31", price: 120 },
+    ],
+  })[0];
+  assert.ok(Math.abs(partial.return - 20) < 1e-8);
+  assert.equal(partial.incomplete, true);
+});

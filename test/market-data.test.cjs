@@ -32,9 +32,24 @@ test("rejects wrong share class, currency, empty pages, future and invalid price
 });
 test("retrieval retains provenance and never substitutes synthetic values", async () => {
   const result = await retrieve(isin, async (url) => {
-    assert.match(url, /IE00BYX5NX33%3AEUR$/);
-    return { ok: true, text: async () => html(row("30", "12")) };
+    if (url.includes("/tearsheet/"))
+      return {
+        ok: true,
+        text: async () =>
+          html(row("30", "12")).replace(
+            "</body>",
+            `<section class="mod-tearsheet-add-to-watchlist" data-mod-config='{&quot;xid&quot;:12345}'></section></body>`,
+          ),
+      };
+    const parsed = new URL(url);
+    assert.equal(parsed.searchParams.get("symbol"), "12345");
+    const year = parsed.searchParams.get("startDate").slice(0, 4);
+    const month = year === "2026" ? "October 30" : "December 30";
+    const fragment = `<tr><td>${month}, ${year}</td><td>12</td><td>12</td><td>12</td><td>12</td><td>--</td></tr>`;
+    return { ok: true, text: async () => JSON.stringify({ html: fragment }) };
   });
+  assert.equal(result.prices[0].date, "2018-12-30");
+  assert.equal(result.prices.at(-1).date, "2026-10-30");
   assert.equal(result.currency, "EUR");
   assert.equal(result.source, "retrieved");
   assert.equal(result.prices[0].price, 12);

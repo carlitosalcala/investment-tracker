@@ -7,6 +7,11 @@
           <Title text="{i18n&gt;appTitle}" level="H1"/>
           <ToolbarSpacer/>
           <ObjectStatus text="{i18n&gt;localOnly}" state="Information"/>
+          <Label text="{i18n&gt;theme}" labelFor="themeSelect"/>
+          <Select id="themeSelect" selectedKey="{vm&gt;/theme}" change="onThemeChange">
+            <core:Item key="sap_horizon_dark" text="{i18n&gt;darkTheme}"/>
+            <core:Item key="sap_horizon" text="{i18n&gt;lightTheme}"/>
+          </Select>
           <Button text="{i18n&gt;backup}" icon="sap-icon://download" press="onBackup"/>
           <Button text="{i18n&gt;restore}" press="onRestore"/>
         </OverflowToolbar>
@@ -44,7 +49,11 @@
             <Text text="{vm&gt;/comparisonDates}" class="sapUiSmallMarginBegin"/>
           </HBox>
           <MessageStrip text="{vm&gt;/comparisonStatus}" type="Information" showIcon="true"/>
-          <c:PerformanceChart chartData="{vm&gt;/chart}" tooltip="{i18n&gt;chartDescription}"/>
+          <Title text="{i18n&gt;cumulativeDifference}" level="H3"/>
+          <Text text="{i18n&gt;differenceHelp}" visible="{= !${vm&gt;/differenceAvailable} }"/>
+          <c:PerformanceChart id="differenceChart" chartData="{vm&gt;/differenceChart}" yLabel="pp" tooltip="{i18n&gt;cumulativeDifference}" visible="{vm&gt;/differenceAvailable}"/>
+          <Title text="{i18n&gt;cumulativeReturn}" level="H3"/>
+          <c:PerformanceChart id="returnsChart" chartData="{vm&gt;/chart}" tooltip="{i18n&gt;chartDescription}"/>
           <Title text="{i18n&gt;summary}" level="H3"/>
           <Table id="summary" items="{vm&gt;/summary}" autoPopinMode="true" growing="true" growingThreshold="30">
             <columns>
@@ -83,6 +92,21 @@
                 </cells>
               </ColumnListItem>
             </items>
+          </Table>
+          <Title text="{i18n&gt;byPeriod}" level="H3"/>
+          <Text text="{i18n&gt;periodHelp}"/>
+          <Table id="periodTable" items="{vm&gt;/periodRows}" autoPopinMode="true" growing="true" growingThreshold="50">
+            <columns>
+              <Column><Text text="{i18n&gt;asset}"/></Column>
+              <Column><Text text="{i18n&gt;period}"/></Column>
+              <Column><Text text="{i18n&gt;fundReturn}"/></Column>
+              <Column><Text text="{i18n&gt;indexReturn}"/></Column>
+              <Column><Text text="{i18n&gt;trackingDifference}"/></Column>
+              <Column><Text text="{i18n&gt;actualDates}"/></Column>
+            </columns>
+            <items><ColumnListItem><cells>
+              <Text text="{vm&gt;name}"/><Text text="{vm&gt;period}"/><Text text="{vm&gt;fund}"/><Text text="{vm&gt;index}"/><Text text="{vm&gt;difference}"/><Text text="{vm&gt;dates}"/>
+            </cells></ColumnListItem></items>
           </Table>
           <Title text="{i18n&gt;calendarYears}" level="H3"/>
           <Table id="years" items="{vm&gt;/years}" autoPopinMode="true" growing="true" growingThreshold="30">

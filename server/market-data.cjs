@@ -4,20 +4,24 @@ const dispatcher = new EnvHttpProxyAgent();
 const catalog = {
   IE00BYX5NX33: {
     name: "Fidelity MSCI World Index Fund P EUR Acc",
+    inception: "2018-03-20",
     identityUrl:
       "https://www.fidelityinternational.com/FILPS/Documents/en/current/ret.en.xx.IE00BYX5NX33.pdf",
   },
   IE00BYX5MD61: {
     name: "Fidelity MSCI Europe Index Fund P EUR Acc",
+    inception: "2018-03-20",
     identityUrl:
       "https://www.fidelityinternational.com/FILPS/Documents/fr/current/ret.fr.xx.IE00BYX5MD61.pdf",
   },
   IE000QAZP7L2: {
     name: "iShares Emerging Markets Index Fund (IE) S EUR Acc",
+    inception: "2025-08-21",
     identityUrl: "https://www.ishares.com/uk/individual/en/products/345276/",
   },
   IE000ZYRH0Q7: {
     name: "iShares Developed World Index Fund (IE) S EUR Acc",
+    inception: "2025-08-21",
     identityUrl: "https://www.ishares.com/uk/individual/en/products/345277/",
   },
 };
@@ -115,6 +119,93 @@ async function retrieve(isin, request = fetch) {
     );
   const html = await response.text();
   if (html.length > 5_000_000) throw Error("Provider response is too large.");
+  const initialPrices = parseHistory(html, isin);
+  const $ = cheerio.load(html);
+  let xid;
+  $("section.mod-tearsheet-add-to-watchlist[data-mod-config]").each(
+    (_, element) => {
+      try {
+        const config = JSON.parse($(element).attr("data-mod-config"));
+        if (/^\d+$/.test(String(config.xid))) xid = String(config.xid);
+      } catch {
+        /* Ignore unrelated invalid configuration. */
+      }
+    },
+  );
+  if (!xid)
+    throw Error(
+      "The provider did not supply a history identifier. Existing history has been retained.",
+    );
+  const currentYear = new Date().getUTCFullYear();
+  const startYear = Number(catalog[isin].inception.slice(0, 4));
+  const histories = await Promise.all(
+    Array.from({ length: currentYear - startYear + 1 }, async (_, offset) => {
+      const year = startYear + offset;
+      const end =
+        year === currentYear
+          ? new Date().toISOString().slice(0, 10).replaceAll("-", "/")
+          : `${year}/12/31`;
+      const query = new URLSearchParams({
+        startDate: `${year}/01/01`,
+        endDate: end,
+        symbol: xid,
+      });
+      let result;
+      try {
+        result = await request(
+          `https://markets.ft.com/data/equities/ajax/get-historical-prices?${query}`,
+          {
+            dispatcher,
+            signal: AbortSignal.timeout(20000),
+            headers: {
+              "User-Agent": "InvestmentJournal/1.0",
+              Accept: "application/json",
+            },
+          },
+        );
+      } catch {
+        throw Error(
+          `Could not retrieve history for ${year}. Existing history has been retained.`,
+        );
+      }
+      if (!result.ok)
+        throw Error(
+          `Price provider returned HTTP ${result.status} for ${year}. Existing history has been retained.`,
+        );
+      let data;
+      try {
+        data = JSON.parse(await result.text());
+      } catch {
+        throw Error(`Invalid history response for ${year}.`);
+      }
+      if (typeof data.html !== "string" || data.html.length > 5_000_000)
+        throw Error(`Invalid history response for ${year}.`);
+      // The endpoint returns table rows without the instrument label or headings.
+      const fragment = cheerio.load(`<table>${data.html}</table>`);
+      if (!fragment("tr").length)
+        throw Error(
+          `No history returned for ${year}. Existing history has been retained.`,
+        );
+      const table = /<table\b/i.test(data.html)
+        ? data.html
+        : `<table><thead><tr><th>Date</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Volume</th></tr></thead><tbody>${data.html}</tbody></table>`;
+      const points = parseHistory(
+        `<body><div>${isin}:EUR</div>${table}</body>`,
+        isin,
+      );
+      if (points.some((point) => !point.date.startsWith(String(year))))
+        throw Error(`Unexpected date in ${year} history.`);
+      return points;
+    }),
+  );
+  const merged = new Map(
+    initialPrices.map((point) => [point.date, point.price]),
+  );
+  histories.flat().forEach((point) => {
+    if (merged.has(point.date) && merged.get(point.date) !== point.price)
+      throw Error("Provider returned conflicting observations.");
+    merged.set(point.date, point.price);
+  });
   return {
     ...catalog[isin],
     isin,
@@ -125,8 +216,10 @@ async function retrieve(isin, request = fetch) {
     sourceId: url,
     seriesType: "raw",
     fetchedAt: new Date().toISOString(),
-    prices: parseHistory(html, isin),
-    note: "FT daily closing NAV/price; recent provider window only. No interpolation or total-return adjustment.",
+    prices: [...merged]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, price]) => ({ date, price })),
+    note: "FT daily closing NAV/price, requested from share-class inception. Coverage depends on provider availability. No interpolation or total-return adjustment.",
   };
 }
 module.exports = { catalog, parseHistory, retrieve };

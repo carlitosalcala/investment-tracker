@@ -2,6 +2,7 @@ sap.ui.define(
   [
     "sap/ui/core/mvc/Controller",
     "sap/ui/model/json/JSONModel",
+    "sap/ui/core/Theming",
     "sap/m/MessageBox",
     "sap/m/MessageToast",
     "sap/m/Dialog",
@@ -18,6 +19,7 @@ sap.ui.define(
   function (
     Controller,
     JSONModel,
+    Theming,
     MessageBox,
     Toast,
     Dialog,
@@ -40,12 +42,14 @@ sap.ui.define(
       onInit() {
         this.vm = new JSONModel({
           section: "dashboard",
+          theme: this.data().preferences.theme || "sap_horizon_dark",
           period: "All",
           periods: F.periods.map((key) => ({ key })),
           from: "2025-01-01",
           to: new Date().toISOString().slice(0, 10),
         });
         this.getView().setModel(this.vm, "vm");
+        Theming.setTheme(this.vm.getProperty("/theme"));
         this.getOwnerComponent()
           .getRouter()
           .attachRouteMatched((e) => {
@@ -57,6 +61,7 @@ sap.ui.define(
           });
         this.refresh();
         if (this.data().loadError) MessageBox.error(this.t("loadError"));
+        else this.onRetrievePrices(null, true);
       },
       t(k) {
         return this.getOwnerComponent()
@@ -76,6 +81,15 @@ sap.ui.define(
           MessageBox.error(this.t("saveError"));
         }
       },
+      onThemeChange(e) {
+        const theme = e.getSource().getSelectedKey();
+        this.data().preferences.theme = theme;
+        Theming.setTheme(theme);
+        this.vm.setProperty("/theme", theme);
+        this.save();
+        this.byId("returnsChart").invalidate();
+        this.byId("differenceChart").invalidate();
+      },
       onNavigate(e) {
         this.getOwnerComponent()
           .getRouter()
@@ -89,6 +103,17 @@ sap.ui.define(
           v = this.vm;
         const active = d.assets.filter((a) => !a.archived);
         v.setProperty("/activeAssets", active);
+        const years = [
+          ...new Set(
+            active.flatMap((a) => a.prices.map((p) => p.date.slice(0, 4))),
+          ),
+        ]
+          .sort()
+          .reverse();
+        v.setProperty(
+          "/periods",
+          [...F.periods, ...years].map((key) => ({ key })),
+        );
         const keys = this.byId("selection").getSelectedKeys();
         const selected = active.filter((a) => keys.includes(a.id));
         const p = v.getProperty("/period");
@@ -154,6 +179,100 @@ sap.ui.define(
             };
           }),
         );
+        const validBenchmark = (a) => {
+          const b = d.assets.find((asset) => asset.id === a.benchmark);
+          return b &&
+            b.prices.length &&
+            b.source === a.source &&
+            b.currency === a.currency &&
+            b.seriesType === a.seriesType
+            ? b
+            : null;
+        };
+        const pair = selected
+          .map((a) => [a, validBenchmark(a)])
+          .find(([a, b]) => a.prices.length && b);
+        const difference = pair
+          ? F.compare(
+              pair,
+              p,
+              p === "Custom" ? v.getProperty("/from") : null,
+              p === "Custom" ? v.getProperty("/to") : null,
+            )
+          : null;
+        v.setProperty(
+          "/differenceChart",
+          difference && difference.series.length === 2
+            ? {
+                dates: difference.dates,
+                series: [
+                  {
+                    label: pair[0].name + " − " + pair[1].name,
+                    values: difference.series[0].values.map(
+                      (value, i) => value - difference.series[1].values[i],
+                    ),
+                  },
+                ],
+              }
+            : { dates: [], series: [] },
+        );
+        v.setProperty("/differenceAvailable", !!difference?.dates.length);
+        const periodRows = selected.flatMap((a) => {
+          if (!a.prices.length) return [];
+          const benchmark = validBenchmark(a);
+          const years = F.years(a).reverse();
+          const periods = [
+            { key: "1M", label: "1M" },
+            { key: "3M", label: "3M" },
+            { key: "6M", label: "6M" },
+            { key: "YTD", label: "YTD" },
+            { key: "1Y", label: "1Y" },
+            { key: "All", label: this.t("sinceFirst") },
+          ].concat(
+            years.map((y) => ({
+              key: y.year,
+              label: y.year,
+              partial: y.incomplete,
+            })),
+          );
+          return periods.map((period) => {
+            const comparison = F.compare(
+              benchmark ? [a, benchmark] : [a],
+              period.key,
+            );
+            const enough = comparison.dates.length > 1;
+            const fund = enough ? comparison.series[0].return : null;
+            const index =
+              enough && benchmark ? comparison.series[1].return : null;
+            const earliest = benchmark
+              ? [a.prices[0].date, benchmark.prices[0].date].sort().at(-1)
+              : a.prices[0].date;
+            const target =
+              period.key === "All"
+                ? null
+                : /^\d{4}$/.test(period.key)
+                  ? +period.key - 1 + "-12-31"
+                  : F.boundary(
+                      comparison.end || a.prices.at(-1).date,
+                      period.key,
+                    );
+            const partial = period.partial || (target && target < earliest);
+            return {
+              name: a.name,
+              period: period.label + (partial ? " *" : ""),
+              fund: fund === null ? "—" : fmt(fund) + "%",
+              index: index === null ? "—" : fmt(index) + "%",
+              difference:
+                fund === null || index === null
+                  ? "—"
+                  : fmt(fund - index) + " pp",
+              dates: comparison.start
+                ? comparison.start + " → " + comparison.end
+                : "—",
+            };
+          });
+        });
+        v.setProperty("/periodRows", periodRows);
         v.setProperty(
           "/years",
           selected.flatMap((a) =>
@@ -309,13 +428,17 @@ sap.ui.define(
           },
         });
       },
-      async onRetrievePrices(e) {
+      async onRetrievePrices(e, automatic = false) {
         if (this.vm.getProperty("/retrieving")) return;
         const row = e?.getSource().getBindingContext()?.getObject();
         const assets = row
           ? [row]
           : this.data().assets.filter(
-              (a) => !a.archived && a.source !== "imported",
+              (a) =>
+                !a.archived &&
+                (automatic
+                  ? ["unavailable", "retrieved"].includes(a.source)
+                  : a.source !== "imported"),
             );
         this.vm.setProperty("/retrieving", true);
         this.vm.setProperty("/retrievalStatus", this.t("retrievingPrices"));
@@ -324,10 +447,11 @@ sap.ui.define(
         try {
           for (const asset of assets) {
             if (!asset.isin) continue;
+            const initialSource = asset.source;
             try {
               const response = await fetch(
                 "/api/prices/" + encodeURIComponent(asset.isin),
-                { signal: AbortSignal.timeout(25000) },
+                { signal: AbortSignal.timeout(60000) },
               );
               const result = await response.json();
               if (!response.ok)
@@ -346,7 +470,8 @@ sap.ui.define(
               // Do not apply a response after a restore, removal, edit or CSV import.
               if (
                 !this.data().assets.includes(asset) ||
-                asset.source === "imported"
+                asset.source === "imported" ||
+                asset.source !== initialSource
               )
                 continue;
               const prior =
@@ -367,9 +492,10 @@ sap.ui.define(
           }
           if (count) {
             this.save();
-            this.byId("selection").setSelectedKeys(
-              assets.filter((a) => a.source === "retrieved").map((a) => a.id),
-            );
+            if (!this.byId("selection").getSelectedKeys().length)
+              this.byId("selection").setSelectedKeys(
+                assets.filter((a) => a.source === "retrieved").map((a) => a.id),
+              );
             this.refresh();
           }
           this.vm.setProperty(
@@ -682,6 +808,11 @@ sap.ui.define(
           const d = F.restore(text);
           this.confirm("restoreConfirm", () => {
             this.getOwnerComponent().getModel().setData(d);
+            this.vm.setProperty(
+              "/theme",
+              d.preferences.theme || "sap_horizon_dark",
+            );
+            Theming.setTheme(this.vm.getProperty("/theme"));
             this.save();
           });
         });

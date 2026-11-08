@@ -36,10 +36,12 @@
     const d = new Date(end + "T00:00:00Z");
     if (p === "YTD") return d.getUTCFullYear() - 1 + "-12-31";
     if (p === "30D") d.setUTCDate(d.getUTCDate() - 30);
-    if (p === "6M" || p === "1Y") {
+    if (["1M", "3M", "6M", "1Y"].includes(p)) {
       const day = d.getUTCDate();
       d.setUTCDate(1);
-      d.setUTCMonth(d.getUTCMonth() - (p === "6M" ? 6 : 12));
+      d.setUTCMonth(
+        d.getUTCMonth() - { "1M": 1, "3M": 3, "6M": 6, "1Y": 12 }[p],
+      );
       const last = new Date(
         Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0),
       ).getUTCDate();
@@ -53,7 +55,8 @@
       return { dates: [], series: [], start: null, end: null };
     const today = iso(new Date());
     const requestedEnd =
-      to || usable.map((a) => a.prices.at(-1).date).sort()[0];
+      (/^\d{4}$/.test(period) ? period + "-12-31" : to) ||
+      usable.map((a) => a.prices.at(-1).date).sort()[0];
     const end = requestedEnd > today ? today : requestedEnd;
     const common = usable
       .map((a) => a.prices[0].date)
@@ -77,6 +80,9 @@
       start =
         shared[Math.max(0, shared.length - 1 - (period === "1D" ? 1 : 5))];
     else if (period === "All") start = shared[0];
+    else if (/^\d{4}$/.test(period))
+      start =
+        shared.filter((d) => d <= +period - 1 + "-12-31").at(-1) || shared[0];
     else {
       const target = period === "Custom" ? from : boundary(end, period);
       start = shared.filter((d) => d <= target).at(-1) || shared[0];
@@ -183,13 +189,17 @@
   function years(a) {
     const ys = [...new Set(a.prices.map((r) => r.date.slice(0, 4)))];
     return ys.map((y) => {
-      const first = at(a.prices, +y - 1 + "-12-31"),
+      const boundaryPrice = at(a.prices, +y - 1 + "-12-31"),
+        first = boundaryPrice || a.prices.find((r) => r.date.startsWith(y)),
         last = at(a.prices, y + "-12-31");
       return {
         year: y,
-        return: first && last ? (last.price / first.price - 1) * 100 : null,
+        return:
+          first && last && first.date !== last.date
+            ? (last.price / first.price - 1) * 100
+            : null,
         incomplete:
-          !first ||
+          !boundaryPrice ||
           !last ||
           (last.date !== y + "-12-31" &&
             a.prices.at(-1).date < +y + 1 + "-01-01"),

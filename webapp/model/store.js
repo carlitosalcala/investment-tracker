@@ -10,7 +10,7 @@ sap.ui.define(["./finance"], function (F) {
     ];
     return {
       version: 1,
-      preferences: { currency: "EUR" },
+      preferences: { currency: "EUR", theme: "sap_horizon_dark" },
       purchases: [],
       assets: isins.map((isin, i) => ({
         id: isin,
