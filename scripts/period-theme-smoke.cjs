@@ -33,7 +33,9 @@ const assert = require("node:assert/strict");
         },
       });
     });
-    await page.goto("http://localhost:8080/index.html");
+    await page.goto(
+      (process.env.TRACKER_URL || "http://localhost:8080") + "/index.html",
+    );
     await page
       .getByText("4 fund(s) updated.", { exact: true })
       .waitFor({ timeout: 60000 });
@@ -75,9 +77,53 @@ const assert = require("node:assert/strict");
       .click();
     await page.waitForTimeout(300);
     assert.equal(
-      await periodRows.nth(0).locator("td").first().innerText(),
-      await periodRows.nth(1).locator("td").first().innerText(),
+      (await periodRows.nth(0).innerText()).match(/IE[A-Z0-9]{10}/)[0],
+      (await periodRows.nth(1).innerText()).match(/IE[A-Z0-9]{10}/)[0],
     );
+    const years = page.locator('[id$="--years"] tbody tr.sapMLIB');
+    assert.equal(
+      (await years.nth(0).innerText()).match(/20\d{2}/)[0],
+      (await years.nth(1).innerText()).match(/20\d{2}/)[0],
+    );
+    await page.locator('[id$="--yearSort"]').click();
+    await page
+      .locator("[role=option]:visible")
+      .filter({ hasText: /^Fund$/ })
+      .click();
+    await page.waitForTimeout(200);
+    assert.equal(
+      (await years.nth(0).innerText()).match(/IE[A-Z0-9]{10}/)[0],
+      (await years.nth(1).innerText()).match(/IE[A-Z0-9]{10}/)[0],
+    );
+    await page.locator('[id$="--historySort"]').click();
+    await page
+      .locator("[role=option]:visible")
+      .filter({ hasText: /^Fund$/ })
+      .click();
+    await page.waitForTimeout(200);
+    assert.equal(
+      (await historyRows.nth(0).innerText()).match(/IE[A-Z0-9]{10}/)[0],
+      (await historyRows.nth(1).innerText()).match(/IE[A-Z0-9]{10}/)[0],
+    );
+    for (const [label, theme] of [
+      ["Quartz Light", "sap_fiori_3"],
+      ["Quartz Dark", "sap_fiori_3_dark"],
+    ]) {
+      await page.locator('[id$="--themeSelect"]').click();
+      await page
+        .locator("[role=option]:visible")
+        .filter({ hasText: label })
+        .click();
+      await page.waitForFunction(
+        (value) => sap.ui.require("sap/ui/core/Theming").getTheme() === value,
+        theme,
+      );
+      const css = await page.request.get(
+        (process.env.TRACKER_URL || "http://localhost:8080") +
+          `/resources/sap/m/themes/${theme}/library.css`,
+      );
+      assert.equal(css.status(), 200, `${theme} stylesheet`);
+    }
     await page.locator('[id$="--themeSelect"]').click();
     await page
       .locator("[role=option]:visible")
@@ -100,7 +146,7 @@ const assert = require("node:assert/strict");
     );
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: table limits, show more, period and fund sorting, automatic retrieval and theme persistence",
+      "PASS: table limits, all sorting controls, Quartz themes, automatic retrieval and theme persistence",
     );
   } finally {
     await browser.close();

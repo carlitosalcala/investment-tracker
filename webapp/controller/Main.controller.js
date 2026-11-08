@@ -45,6 +45,8 @@ sap.ui.define(
           theme: this.data().preferences.theme || "sap_horizon_dark",
           period: "All",
           periodSort: "period",
+          yearSort: "year",
+          historySort: "date",
           periods: F.periods.map((key) => ({ key })),
           from: "2025-01-01",
           to: new Date().toISOString().slice(0, 10),
@@ -291,14 +293,22 @@ sap.ui.define(
         v.setProperty("/periodRows", periodRows);
         v.setProperty(
           "/years",
-          selected.flatMap((a) =>
-            F.years(a).map((y) => ({
-              name: a.name,
-              year: y.year,
-              performance: y.return === null ? "—" : fmt(y.return) + "%",
-              coverage: this.t(y.incomplete ? "incomplete" : "complete"),
-            })),
-          ),
+          selected
+            .flatMap((a) =>
+              F.years(a).map((y) => ({
+                name: a.name,
+                year: y.year,
+                performance: y.return === null ? "—" : fmt(y.return) + "%",
+                coverage: this.t(y.incomplete ? "incomplete" : "complete"),
+              })),
+            )
+            .sort((a, b) => {
+              const byYear = b.year.localeCompare(a.year);
+              const byAsset = a.name.localeCompare(b.name);
+              return v.getProperty("/yearSort") === "asset"
+                ? byAsset || byYear
+                : byYear || byAsset;
+            }),
         );
         v.setProperty(
           "/history",
@@ -311,7 +321,13 @@ sap.ui.define(
                 status: this.t(a.source),
               })),
             )
-            .sort((a, b) => b.date.localeCompare(a.date)),
+            .sort((a, b) => {
+              const byDate = b.date.localeCompare(a.date);
+              const byAsset = a.name.localeCompare(b.name);
+              return v.getProperty("/historySort") === "asset"
+                ? byAsset || byDate
+                : byDate || byAsset;
+            }),
         );
         const hs = F.portfolio(d.assets, d.purchases),
           currencies = [...new Set(hs.map((h) => h.currency))];

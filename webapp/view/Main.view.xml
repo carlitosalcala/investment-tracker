@@ -11,6 +11,8 @@
           <Select id="themeSelect" selectedKey="{vm&gt;/theme}" change="onThemeChange">
             <core:Item key="sap_horizon_dark" text="{i18n&gt;darkTheme}"/>
             <core:Item key="sap_horizon" text="{i18n&gt;lightTheme}"/>
+            <core:Item key="sap_fiori_3" text="{i18n&gt;quartzLight}"/>
+            <core:Item key="sap_fiori_3_dark" text="{i18n&gt;quartzDark}"/>
           </Select>
           <Button text="{i18n&gt;backup}" icon="sap-icon://download" press="onBackup"/>
           <Button text="{i18n&gt;restore}" press="onRestore"/>
@@ -116,7 +118,15 @@
               <Text text="{vm&gt;name}"/><Text text="{vm&gt;period}"/><Text text="{vm&gt;fund}"/><Text text="{vm&gt;index}"/><Text text="{vm&gt;difference}"/><Text text="{vm&gt;dates}"/>
             </cells></ColumnListItem></items>
           </Table>
-          <Title text="{i18n&gt;calendarYears}" level="H3"/>
+          <OverflowToolbar>
+            <Title text="{i18n&gt;calendarYears}" level="H3"/>
+            <ToolbarSpacer/>
+            <Label text="{i18n&gt;sortBy}" labelFor="yearSort"/>
+            <Select id="yearSort" selectedKey="{vm&gt;/yearSort}" change="refresh">
+              <core:Item key="year" text="{i18n&gt;sortYear}"/>
+              <core:Item key="asset" text="{i18n&gt;sortAsset}"/>
+            </Select>
+          </OverflowToolbar>
           <Table id="years" items="{vm&gt;/years}" autoPopinMode="true" growing="true" growingThreshold="30">
             <columns>
               <Column>
@@ -146,6 +156,11 @@
           <OverflowToolbar>
             <Title text="{i18n&gt;dailyHistory}"/>
             <ToolbarSpacer/>
+            <Label text="{i18n&gt;sortBy}" labelFor="historySort"/>
+            <Select id="historySort" selectedKey="{vm&gt;/historySort}" change="refresh">
+              <core:Item key="date" text="{i18n&gt;sortDate}"/>
+              <core:Item key="asset" text="{i18n&gt;sortAsset}"/>
+            </Select>
             <Button text="{i18n&gt;exportCSV}" press="onExportCSV"/>
           </OverflowToolbar>
           <Table id="history" items="{vm&gt;/history}" autoPopinMode="true" growing="true" growingThreshold="7" growingTriggerText="{i18n&gt;showMore}">
