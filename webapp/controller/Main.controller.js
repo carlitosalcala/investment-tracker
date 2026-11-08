@@ -44,10 +44,12 @@ sap.ui.define(
           section: "dashboard",
           theme: this.data().preferences.theme || "sap_horizon_dark",
           period: "All",
+          periodSort: "period",
           periods: F.periods.map((key) => ({ key })),
           from: "2025-01-01",
           to: new Date().toISOString().slice(0, 10),
         });
+        this.vm.setSizeLimit(1000000);
         this.getView().setModel(this.vm, "vm");
         Theming.setTheme(this.vm.getProperty("/theme"));
         this.getOwnerComponent()
@@ -259,6 +261,7 @@ sap.ui.define(
             const partial = period.partial || (target && target < earliest);
             return {
               name: a.name,
+              periodKey: period.key,
               period: period.label + (partial ? " *" : ""),
               fund: fund === null ? "—" : fmt(fund) + "%",
               index: index === null ? "—" : fmt(index) + "%",
@@ -272,6 +275,19 @@ sap.ui.define(
             };
           });
         });
+        const periodRank = (key) => {
+          const standard = ["1M", "3M", "6M", "YTD", "1Y", "All"];
+          const index = standard.indexOf(key);
+          return index >= 0 ? index : standard.length + 9999 - Number(key);
+        };
+        const byPeriod = (a, b) =>
+          periodRank(a.periodKey) - periodRank(b.periodKey);
+        const byName = (a, b) => a.name.localeCompare(b.name);
+        periodRows.sort(
+          v.getProperty("/periodSort") === "asset"
+            ? (a, b) => byName(a, b) || byPeriod(a, b)
+            : (a, b) => byPeriod(a, b) || byName(a, b),
+        );
         v.setProperty("/periodRows", periodRows);
         v.setProperty(
           "/years",

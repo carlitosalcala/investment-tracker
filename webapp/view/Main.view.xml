@@ -93,9 +93,17 @@
               </ColumnListItem>
             </items>
           </Table>
-          <Title text="{i18n&gt;byPeriod}" level="H3"/>
+          <OverflowToolbar>
+            <Title text="{i18n&gt;byPeriod}" level="H3"/>
+            <ToolbarSpacer/>
+            <Label text="{i18n&gt;sortBy}" labelFor="periodSort"/>
+            <Select id="periodSort" selectedKey="{vm&gt;/periodSort}" change="refresh">
+              <core:Item key="period" text="{i18n&gt;sortPeriod}"/>
+              <core:Item key="asset" text="{i18n&gt;sortAsset}"/>
+            </Select>
+          </OverflowToolbar>
           <Text text="{i18n&gt;periodHelp}"/>
-          <Table id="periodTable" items="{vm&gt;/periodRows}" autoPopinMode="true" growing="true" growingThreshold="50">
+          <Table id="periodTable" items="{vm&gt;/periodRows}" autoPopinMode="true" growing="true" growingThreshold="14" growingTriggerText="{i18n&gt;showMore}">
             <columns>
               <Column><Text text="{i18n&gt;asset}"/></Column>
               <Column><Text text="{i18n&gt;period}"/></Column>
@@ -140,7 +148,7 @@
             <ToolbarSpacer/>
             <Button text="{i18n&gt;exportCSV}" press="onExportCSV"/>
           </OverflowToolbar>
-          <Table id="history" items="{vm&gt;/history}" autoPopinMode="true" growing="true" growingThreshold="30">
+          <Table id="history" items="{vm&gt;/history}" autoPopinMode="true" growing="true" growingThreshold="7" growingTriggerText="{i18n&gt;showMore}">
             <columns>
               <Column>
                 <Text text="{i18n&gt;asset}"/>

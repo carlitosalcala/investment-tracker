@@ -7,7 +7,9 @@ const assert = require("node:assert/strict");
     args: ["--no-sandbox"],
   });
   try {
-    const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+    const page = await browser.newPage({
+      viewport: { width: 1600, height: 1000 },
+    });
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.route("**/api/prices/*", (route) => {
@@ -42,17 +44,45 @@ const assert = require("node:assert/strict");
       "sap_horizon_dark",
     );
     await page.getByText("By period", { exact: true }).waitFor();
+    const periods = page.locator('[id$="--periodTable"]');
+    const history = page.locator('[id$="--history"]');
+    const periodRows = periods.locator("tbody tr.sapMLIB");
+    const historyRows = history.locator("tbody tr.sapMLIB");
+    await page.waitForFunction(
+      () =>
+        document.querySelectorAll('[id$="--periodTable"] tbody tr.sapMLIB')
+          .length === 14,
+    );
+    assert.equal(await historyRows.count(), 7);
+    for (const row of await periodRows.all().then((rows) => rows.slice(0, 4)))
+      assert.match(await row.innerText(), /1M/);
+    await page.locator('[id$="--history-trigger"]').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelectorAll('[id$="--history"] tbody tr.sapMLIB')
+          .length === 14,
+    );
+    await page.locator('[id$="--periodTable-trigger"]').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelectorAll('[id$="--periodTable"] tbody tr.sapMLIB')
+          .length === 28,
+    );
+    await page.locator('[id$="--periodSort"]').click();
     await page
-      .getByText("Since first available price", { exact: true })
-      .first()
-      .waitFor();
-    await page
-      .locator('[id$="--periodTable"]')
-      .getByText("2024", { exact: true })
-      .first()
-      .waitFor();
+      .locator("[role=option]:visible")
+      .filter({ hasText: /^Fund$/ })
+      .click();
+    await page.waitForTimeout(300);
+    assert.equal(
+      await periodRows.nth(0).locator("td").first().innerText(),
+      await periodRows.nth(1).locator("td").first().innerText(),
+    );
     await page.locator('[id$="--themeSelect"]').click();
-    await page.locator('[role=option]:visible').filter({ hasText: /^Horizon light$/ }).click();
+    await page
+      .locator("[role=option]:visible")
+      .filter({ hasText: /^Horizon light$/ })
+      .click();
     await page.waitForFunction(
       () => sap.ui.require("sap/ui/core/Theming").getTheme() === "sap_horizon",
     );
@@ -70,7 +100,7 @@ const assert = require("node:assert/strict");
     );
     assert.deepEqual(errors, []);
     console.log(
-      "PASS: automatic retrieval, annual periods, dark default, light theme and persistence",
+      "PASS: table limits, show more, period and fund sorting, automatic retrieval and theme persistence",
     );
   } finally {
     await browser.close();
