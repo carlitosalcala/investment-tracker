@@ -1,0 +1,19 @@
+{
+  "name": "investment-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/ui5.cjs serve --port 8080",
+    "build": "npm run vendor && node scripts/ui5.cjs build --all --clean-dest",
+    "test": "node --test test/*.test.cjs",
+    "vendor": "node scripts/vendor.cjs"
+  },
+  "devDependencies": {
+    "@ui5/cli": "4.0.73",
+    "playwright": "1.56.1",
+    "prettier": "3.6.2"
+  },
+  "dependencies": {
+    "chart.js": "4.6.1"
+  }
+}

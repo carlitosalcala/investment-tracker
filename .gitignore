@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.ui5/
+webapp/vendor/chart.umd.js*
+test-results/
