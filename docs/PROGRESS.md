@@ -11,3 +11,5 @@ Validation results and screenshots are recorded alongside delivery. No public de
 ## Verified in this workspace
 
 Nine Node tests cover interval/calendar boundaries, sparse histories, fee-inclusive cost, multiple purchases, missing historical prices, amount-to-quantity, CSV failures, backup round-trip/reference validation, duplicate assets and currency separation. Headless system Chromium exercised demo comparison, routing, purchase entry, reload persistence, backup download, asset creation, CSV import and confirmed restore with no page exceptions. Screenshots: `docs/screenshots/dashboard.png`, `assets.png`, `portfolio.png`, `mobile.png`. Browser scripts use isolated contexts; test purchases are not inserted into the user's browser.
+
+Production build: `npm run build` succeeded with all OpenUI5 libraries included. The built `dist/index.html` was served separately and loaded/plotted fictional demo data in Chromium without page exceptions. Feature branch pushed to GitHub. PR creation via `gh pr create` returned `Post https://api.github.com/graphql: Forbidden`; Git push itself succeeded. No PR was created, no merge or public deployment performed.
