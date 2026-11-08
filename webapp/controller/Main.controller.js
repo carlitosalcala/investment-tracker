@@ -102,6 +102,10 @@ sap.ui.define(
       onSelection() {
         this.refresh();
       },
+      onPortfolioSelection(e) {
+        this.portfolioSelected = new Set(e.getSource().getSelectedKeys());
+        this.refresh();
+      },
       refresh() {
         const d = this.data(),
           v = this.vm;
@@ -329,7 +333,18 @@ sap.ui.define(
                 : byDate || byAsset;
             }),
         );
-        const hs = F.portfolio(d.assets, d.purchases),
+        const portfolioOptions = d.assets.filter((a) => d.purchases.some((p) => p.assetId === a.id));
+        const currentIds = new Set(portfolioOptions.map((a) => a.id));
+        if (!this.portfolioSelected) this.portfolioSelected = new Set(currentIds);
+        else for (const id of currentIds) if (!this.portfolioKnown?.has(id)) this.portfolioSelected.add(id);
+        this.portfolioSelected = new Set([...this.portfolioSelected].filter((id) => currentIds.has(id)));
+        this.portfolioKnown = currentIds;
+        v.setProperty("/portfolioAssets", portfolioOptions);
+        this.byId("portfolioSelection").setSelectedKeys([...this.portfolioSelected]);
+        const portfolioAssets = d.assets.filter((a) => this.portfolioSelected.has(a.id));
+        const portfolioPurchases = d.purchases.filter((p) => this.portfolioSelected.has(p.assetId));
+        v.setProperty("/portfolioPurchases", portfolioPurchases);
+        const hs = F.portfolio(portfolioAssets, portfolioPurchases),
           currencies = [...new Set(hs.map((h) => h.currency))];
         const totals = currencies.map((c) => {
           const rows = hs.filter((h) => h.currency === c),
@@ -362,6 +377,7 @@ sap.ui.define(
               ...h,
               quantity: fmt(h.quantity),
               cost: fmt(h.cost),
+              averagePrice: fmt(h.cost / h.quantity),
               value: fmt(h.value),
               gain: fmt(h.gain),
               source: this.t(h.source),
@@ -374,8 +390,8 @@ sap.ui.define(
         );
         const dates = [
           ...new Set([
-            ...d.purchases.map((p) => p.date),
-            ...d.assets.flatMap((a) =>
+            ...portfolioPurchases.map((p) => p.date),
+            ...portfolioAssets.flatMap((a) =>
               a.currency === "EUR" ? a.prices.map((p) => p.date) : [],
             ),
           ]),
@@ -383,17 +399,17 @@ sap.ui.define(
           .filter(
             (day) =>
               day <= new Date().toISOString().slice(0, 10) &&
-              d.purchases.some((p) => p.date <= day),
+              portfolioPurchases.some((p) => p.date <= day),
           )
           .sort();
-        const eurAssets = d.assets.filter((a) => a.currency === "EUR");
+        const eurAssets = portfolioAssets.filter((a) => a.currency === "EUR");
         v.setProperty("/portfolioChart", {
           dates,
           series: [
             {
               label: this.t("valueEUR"),
               values: dates.map((day) => {
-                const h = F.portfolio(eurAssets, d.purchases, day);
+                const h = F.portfolio(eurAssets, portfolioPurchases, day);
                 return h.some((x) => x.value === null)
                   ? null
                   : h.reduce((s, x) => s + x.value, 0);
@@ -402,7 +418,7 @@ sap.ui.define(
             {
               label: this.t("outlayEUR"),
               values: dates.map((day) =>
-                F.portfolio(eurAssets, d.purchases, day).reduce(
+                F.portfolio(eurAssets, portfolioPurchases, day).reduce(
                   (s, x) => s + x.cost,
                   0,
                 ),
@@ -410,7 +426,7 @@ sap.ui.define(
             },
           ],
         });
-        const ys = [...new Set(d.purchases.map((p) => p.date.slice(0, 4)))];
+        const ys = [...new Set(portfolioPurchases.map((p) => p.date.slice(0, 4)))];
         for (
           let y = +(ys.sort()[0] || new Date().getUTCFullYear());
           y <= new Date().getUTCFullYear();
@@ -423,8 +439,8 @@ sap.ui.define(
           ys.sort().flatMap((year) => {
             const day = year + "-12-31",
               hold = F.portfolio(
-                d.assets,
-                d.purchases,
+                portfolioAssets,
+                portfolioPurchases,
                 day > new Date().toISOString().slice(0, 10)
                   ? new Date().toISOString().slice(0, 10)
                   : day,
@@ -438,7 +454,7 @@ sap.ui.define(
                   year + (+year === new Date().getUTCFullYear() ? " *" : ""),
                 currency,
                 purchases: fmt(
-                  d.purchases
+                  portfolioPurchases
                     .filter(
                       (p) => p.date.startsWith(year) && p.currency === currency,
                     )
@@ -712,8 +728,17 @@ sap.ui.define(
       onAddPurchase() {
         this.purchaseDialog();
       },
+      purchaseAssetName(id) {
+        return this.data().assets.find((a) => a.id === id)?.name || id;
+      },
+      purchaseAmount(price, quantity, fees) {
+        return (price * quantity + fees).toFixed(2);
+      },
+      purchaseQuantity(quantity) {
+        return Number(quantity).toFixed(2);
+      },
       onEditPurchase(e) {
-        this.purchaseDialog(this.asset(e));
+        this.purchaseDialog(e.getSource().getBindingContext("vm").getObject());
       },
       purchaseDialog(old) {
         const assets = this.data().assets;
@@ -759,12 +784,16 @@ sap.ui.define(
                   })
                 : new Input({
                     type: "Number",
-                    value: k === "amount" ? "" : String(p[k]),
+                    value: k === "amount" || (!old && (k === "price" || k === "quantity")) ? "" : String(p[k]),
                   });
           label.setLabelFor(input);
           fields[k] = input;
           box.addItem(input);
         }
+        if (old) {
+          fields.amount.setValue((p.price * p.quantity + p.fees).toFixed(2));
+        }
+        const initialAmount = fields.amount.getValue();
         box.addItem(new Label({ text: this.t("amountHelp"), wrapping: true }));
         const dialog = new Dialog({
           title: this.t("purchase"),
@@ -786,19 +815,25 @@ sap.ui.define(
                 next.currency = assets.find(
                   (a) => a.id === next.assetId,
                 ).currency;
-                if (fields.amount.getValue() !== "")
+                if (fields.amount.getValue() !== "" && (!old || fields.amount.getValue() !== initialAmount)) {
+                  if (!fields.price.getValue()) {
+                    const observation = assets.find((a) => a.id === next.assetId).prices.find((r) => r.date === next.date);
+                    if (!observation) throw Error("purchasePriceMissing");
+                    next.price = observation.price;
+                  }
                   next.quantity = F.quantity(
                     Number(fields.amount.getValue()),
                     next.price,
                     next.fees,
                   );
+                }
                 F.validatePurchase(next, assets);
                 if (old) Object.assign(old, next);
                 else this.data().purchases.push(next);
                 this.save();
                 dialog.close();
               } catch (e) {
-                MessageBox.error(this.t("invalidPurchase"));
+                MessageBox.error(this.t(e.message === "purchasePriceMissing" ? "purchasePriceMissing" : "invalidPurchase"));
               }
             },
           }),
@@ -812,7 +847,7 @@ sap.ui.define(
         dialog.open();
       },
       onDeletePurchase(e) {
-        const p = this.asset(e);
+        const p = e.getSource().getBindingContext("vm").getObject();
         this.confirm("deletePurchaseConfirm", () => {
           this.data().purchases = this.data().purchases.filter(
             (x) => x.id !== p.id,

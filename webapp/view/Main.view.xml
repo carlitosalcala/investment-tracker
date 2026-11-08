@@ -223,8 +223,14 @@
             <Button text="{i18n&gt;addPurchase}" type="Emphasized" press="onAddPurchase"/>
           </OverflowToolbar>
           <MessageStrip text="{i18n&gt;portfolioHelp}" showIcon="true"/>
+          <Label text="{i18n&gt;portfolioFilter}" labelFor="portfolioSelection"/>
+          <MultiComboBox id="portfolioSelection" width="100%" placeholder="{i18n&gt;portfolioFilter}" items="{vm&gt;/portfolioAssets}" selectionFinish="onPortfolioSelection">
+            <core:Item key="{vm&gt;id}" text="{vm&gt;name}"/>
+          </MultiComboBox>
+          <Text text="{i18n&gt;portfolioFilterHelp}"/>
           <Text text="{vm&gt;/totals}" class="totals sapUiSmallMargin"/>
           <Title text="{i18n&gt;holdings}" level="H3"/>
+          <Text text="{i18n&gt;averagePriceHelp}"/>
           <Table id="holdings" items="{vm&gt;/holdings}" autoPopinMode="true" growing="true" growingThreshold="30">
             <columns>
               <Column>
@@ -236,6 +242,7 @@
               <Column>
                 <Text text="{i18n&gt;outlay}"/>
               </Column>
+              <Column><Text text="{i18n&gt;averagePrice}"/></Column>
               <Column>
                 <Text text="{i18n&gt;value}"/>
               </Column>
@@ -261,6 +268,7 @@
                   <Text text="{vm&gt;name}"/>
                   <Text text="{vm&gt;quantity}"/>
                   <Text text="{vm&gt;cost}"/>
+                  <Text text="{vm&gt;averagePrice}"/>
                   <Text text="{vm&gt;value}"/>
                   <Text text="{vm&gt;gain}"/>
                   <Text text="{vm&gt;allocation}"/>
@@ -306,17 +314,28 @@
             </items>
           </Table>
           <Title text="{i18n&gt;purchases}" level="H3"/>
-          <List items="{/purchases}">
-            <CustomListItem>
-              <HBox wrap="Wrap" alignItems="Center" class="sapUiSmallMargin">
-                <ObjectIdentifier title="{assetId}" text="{date}"/>
-                <Text text="{quantity}" class="sapUiSmallMargin"/>
-                <Text text="{currency}"/>
-                <Button text="{i18n&gt;edit}" press="onEditPurchase"/>
-                <Button text="{i18n&gt;delete}" press="onDeletePurchase"/>
-              </HBox>
-            </CustomListItem>
-          </List>
+          <Table items="{vm&gt;/portfolioPurchases}" autoPopinMode="true" growing="true" growingThreshold="30">
+            <columns>
+              <Column><Text text="{i18n&gt;asset}"/></Column>
+              <Column><Text text="{i18n&gt;date}"/></Column>
+              <Column><Text text="{i18n&gt;unitPrice}"/></Column>
+              <Column><Text text="{i18n&gt;quantity}"/></Column>
+              <Column><Text text="{i18n&gt;fees}"/></Column>
+              <Column><Text text="{i18n&gt;investmentAmount}"/></Column>
+              <Column><Text text="{i18n&gt;currency}"/></Column>
+              <Column><Text text="{i18n&gt;actions}"/></Column>
+            </columns>
+            <items><ColumnListItem><cells>
+              <Text text="{path: 'vm&gt;assetId', formatter: '.purchaseAssetName'}"/>
+              <Text text="{vm&gt;date}"/>
+              <Text text="{vm&gt;price}"/>
+              <Text text="{path: 'vm&gt;quantity', formatter: '.purchaseQuantity'}"/>
+              <Text text="{vm&gt;fees}"/>
+              <Text text="{parts: ['vm&gt;price', 'vm&gt;quantity', 'vm&gt;fees'], formatter: '.purchaseAmount'}"/>
+              <Text text="{vm&gt;currency}"/>
+              <HBox><Button text="{i18n&gt;edit}" press="onEditPurchase"/><Button text="{i18n&gt;delete}" press="onDeletePurchase"/></HBox>
+            </cells></ColumnListItem></items>
+          </Table>
         </VBox>
       </VBox>
     </content>
