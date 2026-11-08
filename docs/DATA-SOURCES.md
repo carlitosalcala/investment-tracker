@@ -1,5 +1,9 @@
 # Real data retrieval
 
+## Stocks
+
+The six suggested listings use Yahoo Finance's unofficial chart endpoint for up to five years of daily close data. The server checks the symbol, exchange and currency, excludes the current exchange-local day, and retains saved data on errors or rate limits. Availability, history and Yahoo's response format can change; confirm Yahoo's terms for the intended use. CSV-imported histories are not overwritten. There is no Alpha Vantage fallback. Stock splits and dividend cash flows are not modeled, so portfolio history and returns spanning corporate actions may be inaccurate. Yahoo close history may reflect split adjustments and should not be treated as a verified execution price.
+
 The four configured ISINs identify EUR accumulating mutual-fund share classes, not exchange tickers:
 
 | ISIN | Share class | Identity reference |

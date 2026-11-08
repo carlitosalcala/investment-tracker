@@ -3,26 +3,28 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { retrieve } = require("./market-data.cjs");
+const { retrieveStock } = require("./stock-data.cjs");
 const production = process.argv.includes("--production");
 const port = Number(process.env.PORT || 8080);
 const uiPort = Number(process.env.UI5_PORT || 8081);
 const cache = new Map();
 const pending = new Map();
-async function marketData(isin) {
-  const hit = cache.get(isin);
+async function marketData(isin, stock = false) {
+  const key = (stock ? "stock:" : "fund:") + isin;
+  const hit = cache.get(key);
   if (hit && Date.now() - hit.time < 15 * 60 * 1000) return hit.data;
-  if (!pending.has(isin)) {
+  if (!pending.has(key)) {
     pending.set(
-      isin,
-      retrieve(isin)
+      key,
+      (stock ? retrieveStock(isin) : retrieve(isin))
         .then((data) => {
-          cache.set(isin, { time: Date.now(), data });
+          cache.set(key, { time: Date.now(), data });
           return data;
         })
-        .finally(() => pending.delete(isin)),
+        .finally(() => pending.delete(key)),
     );
   }
-  return pending.get(isin);
+  return pending.get(key);
 }
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
@@ -30,12 +32,13 @@ const server = http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store");
     const match = url.pathname.match(/^\/api\/prices\/([A-Z0-9]{12})$/);
-    if (req.method !== "GET" || !match) {
+    const stock = url.pathname.match(/^\/api\/stocks\/([A-Z0-9.]{1,12})$/);
+    if (req.method !== "GET" || (!match && !stock)) {
       res.writeHead(404);
       return res.end(JSON.stringify({ error: "Unknown endpoint" }));
     }
     try {
-      res.end(JSON.stringify(await marketData(match[1])));
+      res.end(JSON.stringify(await marketData((match || stock)[1], !!stock)));
     } catch (error) {
       res.writeHead(error.status || 502);
       res.end(JSON.stringify({ error: error.message }));

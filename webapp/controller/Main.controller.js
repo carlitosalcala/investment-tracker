@@ -494,18 +494,23 @@ sap.ui.define(
         const failures = [];
         try {
           for (const asset of assets) {
-            if (!asset.isin) continue;
+            const stockSymbols = { "ASML|Euronext Amsterdam": "ASML.AS", "IBE|Madrid": "IBE.MC", "NOVN|SIX Swiss Exchange": "NOVN.SW", "ITX|Madrid": "ITX.MC", "DIS|NYSE": "DIS", "AIR|Euronext Paris": "AIR.PA" };
+            const isStock = asset.type === "Stock";
+            const symbol = isStock ? stockSymbols[`${asset.ticker}|${asset.exchange}`] : null;
+            if (isStock && !symbol) continue;
+            if (!isStock && !asset.isin) continue;
             const initialSource = asset.source;
+            const initialIdentity = [asset.type, asset.isin, asset.ticker, asset.exchange, asset.currency].join("|");
             try {
               const response = await fetch(
-                "/api/prices/" + encodeURIComponent(asset.isin),
+                (isStock ? "/api/stocks/" + encodeURIComponent(symbol) : "/api/prices/" + encodeURIComponent(asset.isin)),
                 { signal: AbortSignal.timeout(60000) },
               );
               const result = await response.json();
               if (!response.ok)
                 throw Error(result.error || "Price request failed");
               if (
-                result.isin !== asset.isin ||
+                (isStock ? result.symbol !== symbol || result.ticker !== asset.ticker || result.exchange !== asset.exchange : result.isin !== asset.isin) ||
                 result.currency !== asset.currency ||
                 result.source !== "retrieved" ||
                 result.seriesType !== "raw"
@@ -518,6 +523,7 @@ sap.ui.define(
               // Do not apply a response after a restore, removal, edit or CSV import.
               if (
                 !this.data().assets.includes(asset) ||
+                [asset.type, asset.isin, asset.ticker, asset.exchange, asset.currency].join("|") !== initialIdentity ||
                 asset.source === "imported" ||
                 asset.source !== initialSource
               )
@@ -530,12 +536,13 @@ sap.ui.define(
                   : [];
               const merged = new Map(prior.map((p) => [p.date, p]));
               prices.forEach((p) => merged.set(p.date, p));
-              Object.assign(asset, result, {
+              const { symbol: ignoredSymbol, yahooExchange: ignoredExchange, ...marketResult } = result;
+              Object.assign(asset, marketResult, {
                 prices: F.observations([...merged.values()]),
               });
               count++;
             } catch (error) {
-              failures.push(asset.isin + ": " + error.message);
+              failures.push((symbol || asset.isin) + ": " + error.message);
             }
           }
           if (count) {
@@ -549,7 +556,7 @@ sap.ui.define(
           this.vm.setProperty(
             "/retrievalStatus",
             count +
-              " fund(s) updated." +
+              " asset(s) updated." +
               (failures.length ? " " + failures.join(" · ") : ""),
           );
         } finally {
@@ -582,6 +589,27 @@ sap.ui.define(
       },
       onAddAsset() {
         this.assetDialog();
+      },
+      onAddStocks() {
+        const listings = [
+          ["ASML", "ASML", "Euronext Amsterdam", "EUR"],
+          ["Iberdrola", "IBE", "Madrid", "EUR"],
+          ["Novartis", "NOVN", "SIX Swiss Exchange", "CHF"],
+          ["Inditex", "ITX", "Madrid", "EUR"],
+          ["The Walt Disney Company", "DIS", "NYSE", "USD"],
+          ["Airbus", "AIR", "Euronext Paris", "EUR"],
+        ];
+        const assets = this.data().assets;
+        let added = 0;
+        for (const [name, ticker, exchange, currency] of listings) {
+          if (assets.some((a) => a.name.toLowerCase() === name.toLowerCase() || (a.ticker?.toUpperCase() === ticker && (a.exchange || "").toLowerCase() === exchange.toLowerCase()))) continue;
+          const asset = { id: crypto.randomUUID(), name, type: "Stock", isin: "", ticker, exchange, currency, source: "unavailable", sourceId: "", seriesType: "raw", benchmark: "", archived: false, prices: [] };
+          F.validateAsset(asset, assets);
+          assets.push(asset);
+          added++;
+        }
+        if (added) this.save();
+        MessageBox.information(this.t("stockAdded").replace("{0}", added));
       },
       onEditAsset(e) {
         this.assetDialog(this.asset(e));

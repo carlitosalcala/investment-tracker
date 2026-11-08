@@ -194,12 +194,15 @@
           <OverflowToolbar>
             <Title text="{i18n&gt;assets}"/>
             <ToolbarSpacer/>
+            <Button text="{i18n&gt;addExampleStocks}" press="onAddStocks"/>
             <Button text="{i18n&gt;addAsset}" type="Emphasized" press="onAddAsset"/>
           </OverflowToolbar>
+          <Text text="{i18n&gt;stockHelp}"/>
           <List items="{/assets}">
             <CustomListItem>
               <VBox class="sapUiSmallMargin">
                 <ObjectIdentifier title="{name}" text="{isin}"/>
+                <Text text="{= ${type} === 'Stock' ? ${ticker} + ' · ' + ${exchange} : '' }"/>
                 <ObjectStatus text="{currency}"/>
                 <Text text="{source}"/>
                 <Link text="{i18n&gt;priceSource}" href="{sourceId}" target="_blank" visible="{= ${source} === 'retrieved' }"/>
