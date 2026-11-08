@@ -19,19 +19,20 @@ npm test
 npm run build
 # With the dev server running, system Chromium installed:
 node scripts/smoke.cjs
+node scripts/market-data-smoke.cjs # API failure handling and simulated retrieval flow
 ```
 
-`npm run build` vendors Chart.js and builds all UI5 runtime dependencies to `dist/`. Serve `dist/` with any static HTTP host. A preview can be deployed by uploading that directory to a private static preview host (e.g. a draft Netlify deploy). No deployment is performed by this project. No server secrets or environment file are needed.
+`npm run build` vendors Chart.js and builds all UI5 runtime dependencies to `dist/`. Run `npm run start:production` to serve `dist/` and the real-data API together. A static host alone does not provide the price API. A preview can be deployed by uploading that directory to a private static preview host (e.g. a draft Netlify deploy). No deployment is performed by this project. No server secrets or environment file are needed.
 
 ## First use
 
-The four requested ISINs are seeded **without verified identities or market prices**. EUR and Fund are editable placeholders. Load the explicitly fictional demo to explore the chart, or import your own daily prices. Select assets on Compare. Manage metadata and benchmark references on Assets; archive hides an asset from comparison while retaining purchases. Remove requires no associated purchases.
+The four requested EUR accumulating funds are seeded with researched share-class names and no fabricated prices. Click **Retrieve real prices** to fetch their recent daily closing histories through the server. Each asset shows its price source and retrieval timestamp. Refresh preserves CSV imports and retains existing data on request failure. Automatic retrieval requires server access to `markets.ft.com`; this managed environment currently blocks that domain. See [data coverage](docs/DATA-SOURCES.md) for the exact limitation. You can also use the fictional demo or import daily prices. Select assets on Compare. Manage metadata and benchmark references on Assets; archive hides an asset from comparison while retaining purchases. Remove requires no associated purchases.
 
 CSV import on an asset accepts UTF-8 `date,price` with ISO dates and positive decimal prices. It replaces history only after confirmation. Configure currency and series kind first. History export includes asset identifier, currency and provenance; this multi-asset export is not the single-asset import schema.
 
 On Portfolio enter unit price, quantity and fees; optionally enter a total investment amount inclusive of fees to calculate quantity. Multiple purchases are supported. Sales, transfers and dividend cash flows are not supported. Values use latest known prices; missing data stays unavailable. Native currency totals remain separate with no fabricated FX conversion.
 
-Everything stays in this browser's localStorage; it does not sync. Export JSON backups regularly. Restore validates the schema and asks for confirmation before replacement. Do not use demo valuations for investment decisions.
+Portfolio entries and histories are saved in this browser's localStorage; they do not sync. Real-price requests send the requested ISIN to the server and price provider; portfolio entries are not sent. Export JSON backups regularly. Restore validates the schema and asks for confirmation before replacement. Do not use demo valuations for investment decisions.
 
 See [data coverage](docs/DATA-SOURCES.md), [calculation rules](docs/CALCULATIONS.md), and [progress](docs/PROGRESS.md). No source, branding or assets were copied from the inaccessible inspiration site.
 

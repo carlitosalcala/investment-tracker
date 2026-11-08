@@ -15,7 +15,12 @@ sap.ui.define(["./finance"], function (F) {
       assets: isins.map((isin, i) => ({
         id: isin,
         isin,
-        name: isin,
+        name: [
+          "Fidelity MSCI World Index Fund P EUR Acc",
+          "Fidelity MSCI Europe Index Fund P EUR Acc",
+          "iShares Emerging Markets Index Fund (IE) S EUR Acc",
+          "iShares Developed World Index Fund (IE) S EUR Acc",
+        ][i],
         type: "Fund",
         ticker: "",
         exchange: "",
@@ -26,7 +31,7 @@ sap.ui.define(["./finance"], function (F) {
         benchmark: "",
         archived: false,
         prices: [],
-        note: "unverified",
+        note: "EUR accumulating share class; retrieve prices to populate history",
       })),
     };
   }

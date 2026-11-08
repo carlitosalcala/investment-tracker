@@ -1,22 +1,26 @@
-# Data sources and coverage
+# Real data retrieval
 
-Verification attempted 2026-11-08. No real market dataset is bundled or claimed.
+The four configured ISINs identify EUR accumulating mutual-fund share classes, not exchange tickers:
 
-| Exact ISIN | Identity / exact share class | Currency / distribution policy | Daily history |
-|---|---|---|---|
-| IE00BYX5NX33 | Unresolved | Unresolved | Unavailable |
-| IE00BYX5MD61 | Unresolved | Unresolved | Unavailable |
-| IE000QAZP7L2 | Unresolved | Unresolved | Unavailable |
-| IE000ZYRH0Q7 | Unresolved | Unresolved | Unavailable |
+| ISIN | Share class | Identity reference |
+|---|---|---|
+| IE00BYX5NX33 | Fidelity MSCI World Index Fund P EUR Acc | [Fidelity factsheet](https://www.fidelityinternational.com/FILPS/Documents/en/current/ret.en.xx.IE00BYX5NX33.pdf) |
+| IE00BYX5MD61 | Fidelity MSCI Europe Index Fund P EUR Acc | [Fidelity factsheet](https://www.fidelityinternational.com/FILPS/Documents/fr/current/ret.fr.xx.IE00BYX5MD61.pdf) |
+| IE000QAZP7L2 | iShares Emerging Markets Index Fund (IE) S EUR Acc | [Issuer](https://www.ishares.com/uk/individual/en/products/345276/) |
+| IE000ZYRH0Q7 | iShares Developed World Index Fund (IE) S EUR Acc | [Issuer](https://www.ishares.com/uk/individual/en/products/345277/) |
 
-Attempted discovery URLs: `https://www.justetf.com/en/etf-profile.html?isin=<ISIN>` for each exact identifier above. All requests failed with proxy CONNECT 403; they are attempted sources, **not verified evidence**. The inspiration URL https://trackingfunds.lovable.app/ also returned proxy 403. Its source, assets and branding were not used.
+Identity references were researched on 2026-11-08 using web search and issuer documents. Existing browser metadata is not silently rewritten; successful retrieval updates the fund name. A currency mismatch blocks updates.
 
-Do not infer a ticker, benchmark, issuer, currency, or accumulating/distributing status from these identifiers. The seed names are the identifiers themselves; Fund and EUR are explicitly unverified editable placeholders. Before importing real data, verify identity and currency using issuer share-class factsheets/KIDs and record the source identifier. No automatic provider is currently configured. This is an intentional fallback rather than a claim of verified coverage. No paid accounts or credentials required.
+## Runtime provider
 
-## Provider boundary
+`GET /api/prices/<ISIN>` retrieves the Financial Times historical-price HTML table at `https://markets.ft.com/data/funds/tearsheet/historical?s=<ISIN>:EUR`. The server uses inherited HTTP(S) proxies and TLS trust through Undici. Only the four configured identifiers are accepted; clients cannot supply arbitrary URLs. Successful responses are cached for 15 minutes, concurrent identical requests share a request, and upstream requests time out after 20 seconds.
 
-`model/store.js` supplies the unavailable seed and deterministic fictional demo series. `finance.csv` validates user-provided observations. Both produce sorted `{date, price}` series consumed by pure calculation functions independently of UI5. A future provider should return that same shape plus provenance, exact share-class identity, currency, series kind, observation dates and licensing metadata. Use a backend if credentials or CORS require it; do not put tokens in UI files.
+The parser requires the exact ISIN/EUR instrument label, a Date/Close table, valid dated positive observations and no conflicting duplicates. Empty, blocked or changed pages fail explicitly. There is no synthetic fallback. The response records price-source URL, retrieval timestamp, currency and raw series kind. A retrieved label means provider-sourced observations, not an independently audited dataset or real-time quote.
 
-Demo activation only replaces unavailable histories. It never supplies real prices for those ISINs. CSV import replaces an asset's history and marks it user-imported, not verified. Select raw, adjusted or totalReturn in asset settings based on source documentation. No benchmarks are seeded. Tracking difference appears only for matching source category, currency and series kind, over shared dates. Compatibility categories are necessary checks, not independent verification of the source's methodology.
+The public page supplies a **recent daily window**, not full inception history. Refresh merges overlapping observations from the same provider and keeps previously retrieved dates. It replaces demo prices only after successful retrieval. It never overwrites CSV-imported histories. Charts and period calculations continue to use actual available dates. Price changes are not a separate total-return index; no FX conversion, interpolation or dividend adjustment is performed. Daily NAVs can be delayed.
 
-Use CSV only when you have the right to use its contents. No market data redistribution license has been obtained. OpenUI5 is Apache-2.0; Chart.js is MIT (its license is retained in the vendored distribution and npm package). Charts are local, with no CDN or market-data calls at runtime.
+## Network limitation in this managed workspace
+
+Web search connectivity and application-server connectivity are separate. On 2026-11-08 the server's actual request to markets.ft.com was denied by the managed proxy with CONNECT 403. Only package/development hosts are permitted by this environment. Add `markets.ft.com` (and any provider redirect host if needed) to the environment's allowed domains and restart/retry retrieval, or run the app on a server with access. Live table compatibility and coverage must be verified once access is available. Parser and UI tests use explicitly constructed test responses; they do not establish live provider availability.
+
+The app must run with its Node server for automatic retrieval. A static-only deployment supports demo/CSV but needs a same-origin `/api/prices/` backend for provider calls. No API key is required. Provider access conditions and redistribution terms still apply; this change does not grant a market-data redistribution license.

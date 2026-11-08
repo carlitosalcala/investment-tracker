@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node scripts/ui5.cjs serve --port 8080",
+    "start": "node server/index.cjs",
     "build": "npm run vendor && node scripts/ui5.cjs build --all --clean-dest",
     "test": "node --test test/*.test.cjs",
-    "vendor": "node scripts/vendor.cjs"
+    "vendor": "node scripts/vendor.cjs",
+    "start:production": "node server/index.cjs --production"
   },
   "devDependencies": {
     "@ui5/cli": "4.0.73",
@@ -14,6 +15,8 @@
     "prettier": "3.6.2"
   },
   "dependencies": {
-    "chart.js": "4.6.1"
+    "chart.js": "4.6.1",
+    "cheerio": "^1.2.0",
+    "undici": "^7.30.2"
   }
 }

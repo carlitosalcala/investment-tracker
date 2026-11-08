@@ -122,7 +122,9 @@
     )
       throw Error("duplicateAsset");
     if (
-      !["demo", "imported", "unavailable", "verified"].includes(a.source) ||
+      !["demo", "imported", "unavailable", "verified", "retrieved"].includes(
+        a.source,
+      ) ||
       !["raw", "adjusted", "totalReturn"].includes(a.seriesType)
     )
       throw Error("invalidAsset");
