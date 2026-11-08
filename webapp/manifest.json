@@ -1,0 +1,79 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "tracker",
+    "type": "application",
+    "title": "{{appTitle}}",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [""],
+      "fallbackLocale": ""
+    },
+    "applicationVersion": {
+      "version": "1.0.0"
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "dependencies": {
+      "minUI5Version": "1.154.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.ui.layout": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "rootView": {
+      "viewName": "tracker.view.App",
+      "type": "XML",
+      "id": "app",
+      "async": true
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "viewType": "XML",
+        "viewPath": "tracker.view",
+        "controlId": "pages",
+        "controlAggregation": "pages",
+        "async": true
+      },
+      "routes": [
+        {
+          "pattern": "",
+          "name": "dashboard",
+          "target": "main"
+        },
+        {
+          "pattern": ":section:",
+          "name": "section",
+          "target": "main"
+        }
+      ],
+      "targets": {
+        "main": {
+          "viewName": "Main",
+          "viewId": "main"
+        }
+      }
+    }
+  }
+}
