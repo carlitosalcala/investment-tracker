@@ -13,3 +13,11 @@ Validation results and screenshots are recorded alongside delivery. No public de
 Nine Node tests cover interval/calendar boundaries, sparse histories, fee-inclusive cost, multiple purchases, missing historical prices, amount-to-quantity, CSV failures, backup round-trip/reference validation, duplicate assets and currency separation. Headless system Chromium exercised demo comparison, routing, purchase entry, reload persistence, backup download, asset creation, CSV import and confirmed restore with no page exceptions. Screenshots: `docs/screenshots/dashboard.png`, `assets.png`, `portfolio.png`, `mobile.png`. Browser scripts use isolated contexts; test purchases are not inserted into the user's browser.
 
 Production build: `npm run build` succeeded with all OpenUI5 libraries included. The built `dist/index.html` was served separately and loaded/plotted fictional demo data in Chromium without page exceptions. Feature branch pushed to GitHub. PR creation via `gh pr create` returned `Post https://api.github.com/graphql: Forbidden`; Git push itself succeeded. No PR was created, no merge or public deployment performed.
+
+## Real-price retrieval update — 2026-11-08
+
+- Added same-origin Node API, fixed ISIN catalog, proxy-aware provider requests, caching, timeouts and strict Date/Close parsing.
+- Added global/per-asset retrieval controls and source/timestamp display. Successful refreshes merge same-provider history; CSV imports and failed requests preserve stored data.
+- Added researched share-class seed names, retrieved-data backup validation and Node production serving.
+- Validation: 12 unit tests passed; UI5 production build passed. Browser integration covers simulated successful retrieval, persistence, request failures, imported-history preservation and merging older observations.
+- Actual live API request returned 502 with an actionable network error: the managed proxy denies CONNECT to markets.ft.com. No live market observations were downloaded. Provider compatibility remains unverified until the domain is allowed. See DATA-SOURCES.md.

@@ -309,6 +309,79 @@ sap.ui.define(
           },
         });
       },
+      async onRetrievePrices(e) {
+        if (this.vm.getProperty("/retrieving")) return;
+        const row = e?.getSource().getBindingContext()?.getObject();
+        const assets = row
+          ? [row]
+          : this.data().assets.filter(
+              (a) => !a.archived && a.source !== "imported",
+            );
+        this.vm.setProperty("/retrieving", true);
+        this.vm.setProperty("/retrievalStatus", this.t("retrievingPrices"));
+        let count = 0;
+        const failures = [];
+        try {
+          for (const asset of assets) {
+            if (!asset.isin) continue;
+            try {
+              const response = await fetch(
+                "/api/prices/" + encodeURIComponent(asset.isin),
+                { signal: AbortSignal.timeout(25000) },
+              );
+              const result = await response.json();
+              if (!response.ok)
+                throw Error(result.error || "Price request failed");
+              if (
+                result.isin !== asset.isin ||
+                result.currency !== asset.currency ||
+                result.source !== "retrieved" ||
+                result.seriesType !== "raw"
+              )
+                throw Error(
+                  "Provider identity or currency differs from asset settings.",
+                );
+              const prices = F.observations(result.prices);
+              if (!prices.length) throw Error("Provider returned no prices.");
+              // Do not apply a response after a restore, removal, edit or CSV import.
+              if (
+                !this.data().assets.includes(asset) ||
+                asset.source === "imported"
+              )
+                continue;
+              const prior =
+                asset.source === "retrieved" &&
+                asset.sourceId === result.sourceId &&
+                asset.seriesType === "raw"
+                  ? asset.prices
+                  : [];
+              const merged = new Map(prior.map((p) => [p.date, p]));
+              prices.forEach((p) => merged.set(p.date, p));
+              Object.assign(asset, result, {
+                prices: F.observations([...merged.values()]),
+              });
+              count++;
+            } catch (error) {
+              failures.push(asset.isin + ": " + error.message);
+            }
+          }
+          if (count) {
+            this.save();
+            this.byId("selection").setSelectedKeys(
+              assets.filter((a) => a.source === "retrieved").map((a) => a.id),
+            );
+            this.refresh();
+          }
+          this.vm.setProperty(
+            "/retrievalStatus",
+            count +
+              " fund(s) updated." +
+              (failures.length ? " " + failures.join(" · ") : ""),
+          );
+        } finally {
+          this.vm.setProperty("/retrieving", false);
+        }
+      },
       onDemo() {
         this.confirm("demoConfirm", () => {
           Store.demo(this.data());

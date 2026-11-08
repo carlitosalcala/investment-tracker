@@ -22,10 +22,12 @@
             </items>
           </SegmentedButton>
           <ToolbarSpacer/>
+          <Button text="{i18n&gt;retrievePrices}" icon="sap-icon://synchronize" press="onRetrievePrices" enabled="{= !${vm&gt;/retrieving} }"/>
           <Button text="{i18n&gt;loadDemo}" press="onDemo"/>
           <Button text="{i18n&gt;clearDemo}" press="onClearDemo"/>
         </OverflowToolbar>
 
+        <MessageStrip text="{vm&gt;/retrievalStatus}" visible="{= !!${vm&gt;/retrievalStatus} }" type="Information" showIcon="true"/>
 
         <VBox visible="{= ${vm&gt;/section} === 'dashboard' }" class="card">
           <Title text="{i18n&gt;comparisonTitle}" level="H2"/>
@@ -153,10 +155,13 @@
                 <ObjectIdentifier title="{name}" text="{isin}"/>
                 <ObjectStatus text="{currency}"/>
                 <Text text="{source}"/>
+                <Link text="{i18n&gt;priceSource}" href="{sourceId}" target="_blank" visible="{= ${source} === 'retrieved' }"/>
+                <Text text="{fetchedAt}" visible="{= ${source} === 'retrieved' }"/>
                 <Text text="{= ${archived} ? ${i18n&gt;archived} : '' }"/>
                 <HBox wrap="Wrap">
                   <Button text="{i18n&gt;edit}" press="onEditAsset"/>
                   <Button text="{i18n&gt;archiveToggle}" press="onArchive"/>
+                  <Button text="{i18n&gt;retrievePrices}" press="onRetrievePrices" enabled="{= !${vm&gt;/retrieving} &amp;&amp; ${source} !== 'imported' }"/>
                   <Button text="{i18n&gt;importCSV}" press="onImportCSV"/>
                   <Button text="{i18n&gt;remove}" type="Reject" press="onRemoveAsset"/>
                 </HBox>
