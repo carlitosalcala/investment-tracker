@@ -4,6 +4,24 @@
   else sap.ui.define([], factory);
 })(function () {
   "use strict";
+  function newId() {
+    if (typeof globalThis.crypto.randomUUID === "function")
+      return globalThis.crypto.randomUUID();
+    // getRandomValues is also available on HTTP LAN origins.
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0"));
+    return [
+      hex.slice(0, 4),
+      hex.slice(4, 6),
+      hex.slice(6, 8),
+      hex.slice(8, 10),
+      hex.slice(10),
+    ]
+      .map((part) => part.join(""))
+      .join("-");
+  }
   const periods = ["1D", "5D", "30D", "6M", "YTD", "1Y", "All", "Custom"];
   const iso = (d) => d.toISOString().slice(0, 10);
   function date(s) {
@@ -247,6 +265,7 @@
     return d;
   }
   return {
+    newId,
     periods,
     date,
     observations,

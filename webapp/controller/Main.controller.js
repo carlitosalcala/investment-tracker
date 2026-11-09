@@ -603,7 +603,7 @@ sap.ui.define(
         let added = 0;
         for (const [name, ticker, exchange, currency] of listings) {
           if (assets.some((a) => a.name.toLowerCase() === name.toLowerCase() || (a.ticker?.toUpperCase() === ticker && (a.exchange || "").toLowerCase() === exchange.toLowerCase()))) continue;
-          const asset = { id: crypto.randomUUID(), name, type: "Stock", isin: "", ticker, exchange, currency, source: "unavailable", sourceId: "", seriesType: "raw", benchmark: "", archived: false, prices: [] };
+          const asset = { id: F.newId(), name, type: "Stock", isin: "", ticker, exchange, currency, source: "unavailable", sourceId: "", seriesType: "raw", benchmark: "", archived: false, prices: [] };
           F.validateAsset(asset, assets);
           assets.push(asset);
           added++;
@@ -616,7 +616,7 @@ sap.ui.define(
       },
       assetDialog(old) {
         const a = old || {
-          id: crypto.randomUUID(),
+          id: F.newId(),
           name: "",
           type: "Fund",
           isin: "",
@@ -772,7 +772,7 @@ sap.ui.define(
         const assets = this.data().assets;
         if (!assets.length) return;
         const p = old || {
-          id: crypto.randomUUID(),
+          id: F.newId(),
           assetId: assets[0].id,
           date: new Date().toISOString().slice(0, 10),
           price: 0,
