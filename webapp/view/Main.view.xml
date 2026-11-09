@@ -3,10 +3,12 @@
   <Page showHeader="false">
     <content>
       <VBox class="shell sapUiResponsiveContentPadding">
-        <OverflowToolbar class="brand">
+        <VBox class="brand">
+          <HBox wrap="Wrap" alignItems="Center" justifyContent="SpaceBetween">
           <Title text="{i18n&gt;appTitle}" level="H1"/>
-          <ToolbarSpacer/>
           <ObjectStatus text="{i18n&gt;localOnly}" state="Information"/>
+          </HBox>
+          <HBox wrap="Wrap" alignItems="Center" class="headerActions">
           <Label text="{i18n&gt;theme}" labelFor="themeSelect"/>
           <Select id="themeSelect" selectedKey="{vm&gt;/theme}" change="onThemeChange">
             <core:Item key="sap_horizon_dark" text="{i18n&gt;darkTheme}"/>
@@ -16,7 +18,8 @@
           </Select>
           <Button text="{i18n&gt;backup}" icon="sap-icon://download" press="onBackup"/>
           <Button text="{i18n&gt;restore}" press="onRestore"/>
-        </OverflowToolbar>
+          </HBox>
+        </VBox>
         <Text text="{i18n&gt;tagline}" class="subtitle"/>
         <MessageStrip text="{i18n&gt;storageNote}" type="Information" showIcon="true"/>
         <MessageStrip text="{i18n&gt;unverifiedNote}" type="Warning" showIcon="true" class="sapUiTinyMarginTop"/>
@@ -284,7 +287,30 @@
           </Table>
           <Title text="{i18n&gt;portfolioHistory}" level="H3"/>
           <Text text="{i18n&gt;portfolioHistoryHelp}"/>
-          <c:PerformanceChart chartData="{vm&gt;/portfolioChart}" yLabel="EUR" tooltip="{i18n&gt;portfolioHistory}"/>
+          <HBox wrap="Wrap" class="headerActions">
+            <Button text="{i18n&gt;portfolioLastWeek}" press="onPortfolioQuickRange">
+              <customData><core:CustomData key="period" value="1W"/></customData>
+            </Button>
+            <Button text="{i18n&gt;portfolioLastMonth}" press="onPortfolioQuickRange">
+              <customData><core:CustomData key="period" value="1M"/></customData>
+            </Button>
+            <Button text="{i18n&gt;portfolioLastQuarter}" press="onPortfolioQuickRange">
+              <customData><core:CustomData key="period" value="3M"/></customData>
+            </Button>
+          </HBox>
+          <HBox wrap="Wrap" alignItems="Center" class="headerActions">
+            <VBox>
+              <Label text="{i18n&gt;from}" labelFor="portfolioFrom"/>
+              <DatePicker id="portfolioFrom" value="{vm&gt;/portfolioFrom}" valueFormat="yyyy-MM-dd" displayFormat="yyyy-MM-dd" placeholder="{i18n&gt;from}" change="onPortfolioRangeChange"/>
+            </VBox>
+            <VBox>
+              <Label text="{i18n&gt;to}" labelFor="portfolioTo"/>
+              <DatePicker id="portfolioTo" value="{vm&gt;/portfolioTo}" valueFormat="yyyy-MM-dd" displayFormat="yyyy-MM-dd" placeholder="{i18n&gt;to}" change="onPortfolioRangeChange"/>
+            </VBox>
+            <Button text="{i18n&gt;portfolioRangeReset}" press="onPortfolioRangeReset"/>
+          </HBox>
+          <MessageStrip text="{vm&gt;/portfolioRangeStatus}" visible="{= !!${vm&gt;/portfolioRangeStatus} }" type="Information" showIcon="true"/>
+          <c:PerformanceChart id="portfolioHistoryChart" chartData="{vm&gt;/portfolioChart}" yLabel="EUR" tooltip="{i18n&gt;portfolioHistory}"/>
           <Title text="{i18n&gt;yearlyPortfolio}" level="H3"/>
           <Table id="portfolioYears" items="{vm&gt;/portfolioYears}" autoPopinMode="true" growing="true" growingThreshold="30">
             <columns>

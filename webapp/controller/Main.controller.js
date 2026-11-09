@@ -47,6 +47,8 @@ sap.ui.define(
           periodSort: "period",
           yearSort: "year",
           historySort: "date",
+          portfolioFrom: "",
+          portfolioTo: "",
           periods: F.periods.map((key) => ({ key })),
           from: "2025-01-01",
           to: new Date().toISOString().slice(0, 10),
@@ -104,6 +106,36 @@ sap.ui.define(
       },
       onPortfolioSelection(e) {
         this.portfolioSelected = new Set(e.getSource().getSelectedKeys());
+        this.refresh();
+      },
+      onPortfolioRangeChange(e) {
+        this.vm.setProperty(
+          e.getSource() === this.byId("portfolioFrom") ? "/portfolioFromInvalid" : "/portfolioToInvalid",
+          !e.getParameter("valid"),
+        );
+        this.refresh();
+      },
+      onPortfolioRangeReset() {
+        for (const key of ["portfolioFrom", "portfolioTo"]) {
+          this.vm.setProperty("/" + key, "");
+          this.vm.setProperty("/" + key + "Invalid", false);
+          this.byId(key).setValue("");
+        }
+        this.refresh();
+      },
+      onPortfolioQuickRange(e) {
+        const period = e.getSource().data("period");
+        const today = new Date().toISOString().slice(0, 10);
+        const week = new Date(today + "T00:00:00Z");
+        week.setUTCDate(week.getUTCDate() - 7);
+        const from = period === "1W"
+          ? week.toISOString().slice(0, 10)
+          : F.boundary(today, period);
+        for (const [key, value] of [["portfolioFrom", from], ["portfolioTo", today]]) {
+          this.vm.setProperty("/" + key, value);
+          this.vm.setProperty("/" + key + "Invalid", false);
+          this.byId(key).setValue(value);
+        }
         this.refresh();
       },
       refresh() {
@@ -388,6 +420,13 @@ sap.ui.define(
             };
           }),
         );
+        const portfolioFrom = v.getProperty("/portfolioFrom"),
+          portfolioTo = v.getProperty("/portfolioTo");
+        const invalidRange = v.getProperty("/portfolioFromInvalid") ||
+          v.getProperty("/portfolioToInvalid") ||
+          (portfolioFrom && !F.date(portfolioFrom)) ||
+          (portfolioTo && !F.date(portfolioTo)) ||
+          (portfolioFrom && portfolioTo && portfolioFrom > portfolioTo);
         const dates = [
           ...new Set([
             ...portfolioPurchases.map((p) => p.date),
@@ -399,9 +438,15 @@ sap.ui.define(
           .filter(
             (day) =>
               day <= new Date().toISOString().slice(0, 10) &&
+              !invalidRange &&
+              (!portfolioFrom || day >= portfolioFrom) &&
+              (!portfolioTo || day <= portfolioTo) &&
               portfolioPurchases.some((p) => p.date <= day),
           )
           .sort();
+        v.setProperty("/portfolioRangeStatus", invalidRange
+          ? this.t("portfolioRangeInvalid")
+          : dates.length ? "" : this.t("portfolioRangeEmpty"));
         const eurAssets = portfolioAssets.filter((a) => a.currency === "EUR");
         v.setProperty("/portfolioChart", {
           dates,
@@ -728,12 +773,18 @@ sap.ui.define(
         const input = document.createElement("input");
         input.type = "file";
         input.accept = accept;
+        input.hidden = true;
+        document.body.appendChild(input);
+        input.oncancel = () => input.remove();
         input.onchange = async () => {
           try {
+            if (!input.files?.length) return;
             if (input.files[0].size > 10000000) throw Error("invalidBackup");
             await fn(await input.files[0].text());
           } catch (e) {
             MessageBox.error(this.t(e.message) || this.t("invalidBackup"));
+          } finally {
+            input.remove();
           }
         };
         input.click();
