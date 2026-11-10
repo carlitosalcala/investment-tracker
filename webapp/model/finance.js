@@ -224,6 +224,30 @@
       };
     });
   }
+  function portfolioMonths(assets, purchases, today = iso(new Date())) {
+    const eligible = purchases.filter((p) => p.date <= today && assets.some((a) => a.id === p.assetId));
+    const currencies = [...new Set(eligible.map((p) => p.currency))].sort();
+    const total = (currency, day) => {
+      const rows = portfolio(assets, eligible, day).filter((h) => h.currency === currency);
+      return rows.some((h) => h.value === null) ? null : rows.reduce((sum, h) => sum + h.value, 0);
+    };
+    const now = new Date(today + "T00:00:00Z");
+    return Array.from({ length: 12 }, (_, i) => {
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      const month = iso(start).slice(0, 7);
+      const end = iso(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)));
+      const previous = iso(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 0)));
+      return currencies.map((currency) => {
+        const value = total(currency, end > today ? today : end);
+        const opening = total(currency, previous);
+        const contributed = eligible.filter((p) => p.currency === currency && p.date.startsWith(month))
+          .reduce((sum, p) => sum + p.price * p.quantity + p.fees, 0);
+        const change = value === null || opening === null ? null : value - opening;
+        return { month, currency, partial: end > today, purchases: contributed, value, change,
+          gain: change === null ? null : change - contributed };
+      });
+    }).flat();
+  }
   function csv(text) {
     const lines = text
       .replace(/^\uFEFF/, "")
@@ -276,6 +300,7 @@
     validatePurchase,
     quantity,
     portfolio,
+    portfolioMonths,
     years,
     csv,
     restore,

@@ -49,6 +49,7 @@ sap.ui.define(
           historySort: "date",
           portfolioFrom: "",
           portfolioTo: "",
+          purchaseAsset: "",
           periods: F.periods.map((key) => ({ key })),
           from: "2025-01-01",
           to: new Date().toISOString().slice(0, 10),
@@ -376,6 +377,22 @@ sap.ui.define(
         const portfolioAssets = d.assets.filter((a) => this.portfolioSelected.has(a.id));
         const portfolioPurchases = d.purchases.filter((p) => this.portfolioSelected.has(p.assetId));
         v.setProperty("/portfolioPurchases", portfolioPurchases);
+        const purchaseAssets = portfolioOptions
+          .filter((a) => this.portfolioSelected.has(a.id))
+          .map((a) => ({ key: a.id, name: a.name }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        let purchaseAsset = v.getProperty("/purchaseAsset");
+        if (purchaseAsset && !purchaseAssets.some((a) => a.key === purchaseAsset)) {
+          purchaseAsset = "";
+          v.setProperty("/purchaseAsset", "");
+        }
+        v.setProperty("/purchaseAssetOptions", [
+          { key: "", name: this.t("allPurchaseAssets") },
+          ...purchaseAssets,
+        ]);
+        v.setProperty("/purchaseRows", portfolioPurchases
+          .filter((p) => !purchaseAsset || p.assetId === purchaseAsset)
+          .sort((a, b) => b.date.localeCompare(a.date)));
         const hs = F.portfolio(portfolioAssets, portfolioPurchases),
           currencies = [...new Set(hs.map((h) => h.currency))];
         const totals = currencies.map((c) => {
@@ -513,6 +530,14 @@ sap.ui.define(
             });
           }),
         );
+        v.setProperty("/portfolioMonths", F.portfolioMonths(portfolioAssets, portfolioPurchases).map((row) => ({
+          month: row.month + (row.partial ? " *" : ""),
+          currency: row.currency,
+          purchases: fmt(row.purchases),
+          value: fmt(row.value),
+          change: fmt(row.change),
+          gain: fmt(row.gain),
+        })));
       },
       confirm(k, fn) {
         MessageBox.confirm(this.t(k), {

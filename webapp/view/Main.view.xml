@@ -342,8 +342,33 @@
               </ColumnListItem>
             </items>
           </Table>
+          <Title text="{i18n&gt;monthlyPortfolio}" level="H3"/>
+          <Text text="{i18n&gt;monthlyPortfolioHelp}"/>
+          <Table id="portfolioMonths" items="{vm&gt;/portfolioMonths}" autoPopinMode="true">
+            <columns>
+              <Column><Text text="{i18n&gt;month}"/></Column>
+              <Column><Text text="{i18n&gt;currency}"/></Column>
+              <Column><Text text="{i18n&gt;purchases}"/></Column>
+              <Column><Text text="{i18n&gt;monthlyValue}"/></Column>
+              <Column><Text text="{i18n&gt;monthlyChange}"/></Column>
+              <Column><Text text="{i18n&gt;monthlyGain}"/></Column>
+            </columns>
+            <items><ColumnListItem><cells>
+              <Text text="{vm&gt;month}"/>
+              <Text text="{vm&gt;currency}"/>
+              <Text text="{vm&gt;purchases}"/>
+              <Text text="{vm&gt;value}"/>
+              <Text text="{vm&gt;change}"/>
+              <Text text="{vm&gt;gain}"/>
+            </cells></ColumnListItem></items>
+          </Table>
           <Title text="{i18n&gt;purchases}" level="H3"/>
-          <Table items="{vm&gt;/portfolioPurchases}" autoPopinMode="true" growing="true" growingThreshold="30">
+          <Label text="{i18n&gt;purchaseAssetFilter}" labelFor="purchaseAssetFilter"/>
+          <Select id="purchaseAssetFilter" selectedKey="{vm&gt;/purchaseAsset}" items="{vm&gt;/purchaseAssetOptions}" change="refresh" width="100%">
+            <core:Item key="{vm&gt;key}" text="{vm&gt;name}"/>
+          </Select>
+          <Text text="{i18n&gt;purchaseListHelp}"/>
+          <Table id="purchaseTable" items="{vm&gt;/purchaseRows}" autoPopinMode="true" growing="true" growingThreshold="30">
             <columns>
               <Column><Text text="{i18n&gt;asset}"/></Column>
               <Column><Text text="{i18n&gt;date}"/></Column>

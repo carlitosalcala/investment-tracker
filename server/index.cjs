@@ -83,6 +83,8 @@ const server = http.createServer(async (req, res) => {
         "Content-Type",
         mime[path.extname(filename)] || "application/octet-stream",
       );
+      // Application files keep stable URLs between deployments.
+      res.setHeader("Cache-Control", "no-cache");
       fs.createReadStream(filename).pipe(res);
     });
   } else {
