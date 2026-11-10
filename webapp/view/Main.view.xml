@@ -351,7 +351,7 @@
               <Column><Text text="{i18n&gt;purchases}"/></Column>
               <Column><Text text="{i18n&gt;monthlyValue}"/></Column>
               <Column><Text text="{i18n&gt;monthlyChange}"/></Column>
-              <Column><Text text="{i18n&gt;monthlyChangePercent}"/></Column>
+              <Column><Text text="{i18n&gt;monthlyReturnPercent}"/></Column>
               <Column><Text text="{i18n&gt;monthlyGain}"/></Column>
             </columns>
             <items><ColumnListItem><cells>
@@ -360,7 +360,7 @@
               <Text text="{vm&gt;purchases}"/>
               <Text text="{vm&gt;value}"/>
               <Text text="{vm&gt;change}"/>
-              <Text text="{vm&gt;changePercent}"/>
+              <Text text="{vm&gt;returnPercent}"/>
               <Text text="{vm&gt;gain}"/>
             </cells></ColumnListItem></items>
           </Table>

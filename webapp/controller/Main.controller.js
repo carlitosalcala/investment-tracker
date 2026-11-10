@@ -536,7 +536,7 @@ sap.ui.define(
           purchases: fmt(row.purchases),
           value: fmt(row.value),
           change: fmt(row.change),
-          changePercent: row.changePercent === null ? "—" : fmt(row.changePercent) + "%",
+          returnPercent: row.returnPercent === null ? "—" : fmt(row.returnPercent) + "%",
           gain: fmt(row.gain),
         })));
       },

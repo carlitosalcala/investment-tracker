@@ -238,14 +238,22 @@
       const end = iso(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)));
       const previous = iso(new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 0)));
       return currencies.map((currency) => {
-        const value = total(currency, end > today ? today : end);
+        const asOf = end > today ? today : end;
+        const value = total(currency, asOf);
         const opening = total(currency, previous);
-        const contributed = eligible.filter((p) => p.currency === currency && p.date.startsWith(month))
-          .reduce((sum, p) => sum + p.price * p.quantity + p.fees, 0);
+        const flows = eligible.filter((p) => p.currency === currency && p.date.startsWith(month));
+        const contributed = flows.reduce((sum, p) => sum + p.price * p.quantity + p.fees, 0);
+        // Modified Dietz: purchases are external flows, assumed at day end.
+        const finish = Date.parse(asOf + "T00:00:00Z");
+        const duration = finish - Date.parse(previous + "T00:00:00Z");
+        const weighted = flows.reduce((sum, p) => sum +
+          (p.price * p.quantity + p.fees) * (finish - Date.parse(p.date + "T00:00:00Z")) / duration, 0);
+        const capital = opening === null ? null : opening + weighted;
+        const gain = value === null || opening === null ? null : value - opening - contributed;
         const change = value === null || opening === null ? null : value - opening;
         return { month, currency, partial: end > today, purchases: contributed, value, change,
-          changePercent: change === null || opening === 0 ? null : change / opening * 100,
-          gain: change === null ? null : change - contributed };
+          returnPercent: gain === null || capital === null || capital <= 0 ? null : gain / capital * 100,
+          gain };
       });
     }).flat();
   }

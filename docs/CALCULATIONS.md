@@ -9,3 +9,22 @@ Calendar-year price change uses last observation on/before previous year-end ver
 Purchases are long-only: cost = quantity × price + fees. Amount input includes fees, so quantity = (amount − fees) / price. All purchase inputs use the asset currency. Holdings use all purchases on/before the valuation date and only the last price on/before that date; no future prices and no zero substitution. Valuation dates disclose staleness. Unrealised gain = value − accumulated cost, including fees. Allocation is within each currency and only available when all holdings in that currency have prices. Portfolio history uses last known prices and shows null for missing valuations. Yearly gain is cumulative unrealised gain at year end, not the year's personal investment return. Current year is partial.
 
 JavaScript IEEE-754 numbers retain input precision until display (up to four decimals displayed). This is a personal analysis tool, not accounting software; binary floating point is not exact decimal arithmetic.
+
+## Monthly investment return
+
+The latest 12 months show absolute value change separately from investment return.
+Value change includes new purchases. Monthly gain/loss subtracts purchases including
+fees from the change. Investment return uses the Modified Dietz estimate:
+
+`100 * (ending value - opening value - purchases) / (opening value + weighted purchases)`
+
+Each purchase (including fees) is weighted by the fraction of calendar days remaining
+in the period after its purchase date, assuming purchase cash flows occur at day end.
+The opening value is the previous month-end value. The current month ends today;
+completed months end on their last calendar day. Purchases represent external funding
+because the app does not track a cash balance. Fees reduce performance. This is an
+estimate rather than an exact time-weighted return. Currencies are calculated separately.
+Missing opening/ending valuations or nonpositive weighted capital produce an unavailable
+percentage. Valuations retain the existing last-known-price convention.
+
+Method reference: [CFA Institute GIPS calculation methodology](https://www.gipsstandards.org/wp-content/uploads/2021/03/gips-handbook-3rd-edition.pdf).
