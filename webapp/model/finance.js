@@ -244,6 +244,7 @@
           .reduce((sum, p) => sum + p.price * p.quantity + p.fees, 0);
         const change = value === null || opening === null ? null : value - opening;
         return { month, currency, partial: end > today, purchases: contributed, value, change,
+          changePercent: change === null || opening === 0 ? null : change / opening * 100,
           gain: change === null ? null : change - contributed };
       });
     }).flat();

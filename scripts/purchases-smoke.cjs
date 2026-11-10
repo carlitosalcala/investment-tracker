@@ -70,6 +70,7 @@ const assert = require("node:assert/strict");
     assert.equal(months[0].month.slice(0, 7), new Date().toISOString().slice(0, 7));
     assert.equal(months[0].currency, "EUR");
     assert.equal(months[0].value, "300");
+    assert.equal(months[0].changePercent, "0%");
     const rows = () =>
       table.evaluate((el) =>
         sap.ui
